@@ -39,7 +39,8 @@ function ImagePreview({ src }) {
 // ─── DinoForm ─────────────────────────────────────────────────────────────────
 function DinoForm({ initial = EMPTY_FORM, onSubmit, onCancel, submitLabel = 'Thêm Dino', loading }) {
   const [form, setForm] = useState(initial);
-  useEffect(() => setForm(initial), [initial]);
+  // Không dùng useEffect để reset form — sử dụng key prop bên ngoài thay thế
+  // (useEffect + inline object làm form bị reset mỗi lần parent re-render)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = e => { e.preventDefault(); onSubmit(form); };
@@ -449,6 +450,7 @@ export default function AdminPage() {
               <button className="close-btn" onClick={() => setEditDino(null)}>✕</button>
             </div>
             <DinoForm
+              key={editDino.id}
               initial={{ ...editDino, level: editDino.level ?? '' }}
               onSubmit={handleEdit}
               onCancel={() => setEditDino(null)}
