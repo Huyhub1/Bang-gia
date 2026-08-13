@@ -8,11 +8,11 @@ const CAT_LABELS  = {
   carnivore:'Ăn Thịt', herbivore:'Ăn Cỏ', flyer:'Bay',
   aquatic:'Dưới Nước', boss:'Boss', utility:'Hỗ Trợ',
 };
-const CURRENCIES = ['Element','Element Shard','Crystal','Gold Coin','Diamond','Amber'];
+const CURRENCIES = ['Cá','Cá Vàng','Cá Rồng','Cá Thần','Cá Đặc Biệt','Cá + Kim Cương'];
 
 const EMPTY_FORM = {
   name:'', category:'carnivore', level:'',
-  price:'', currency:'Element',
+  price:'', currency:'Cá',
   imageUrl:'', description:'',
   available:true, featured:false,
 };
