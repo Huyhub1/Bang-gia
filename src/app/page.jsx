@@ -44,8 +44,10 @@ function Toast({ msg, type, onClose }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [dinos,  setDinos]  = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dinos,      setDinos]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [toast, setToast] = useState(null);
@@ -54,12 +56,38 @@ export default function HomePage() {
     setToast({ msg, type });
   }, []);
 
-  useEffect(() => {
-    fetch('/api/dinos')
-      .then(r => r.json())
-      .then(data => { setDinos(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => { showToast('Không thể tải dữ liệu', 'error'); setLoading(false); });
+  const fetchDinos = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const res  = await fetch('/api/dinos?t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      setDinos(Array.isArray(data) ? data : []);
+      setLastUpdate(new Date());
+    } catch {
+      if (!silent) showToast('Không thể tải dữ liệu', 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [showToast]);
+
+  // Fetch lần đầu
+  useEffect(() => { fetchDinos(false); }, [fetchDinos]);
+
+  // Auto-refresh mỗi 30 giây
+  useEffect(() => {
+    const interval = setInterval(() => fetchDinos(true), 30_000);
+    return () => clearInterval(interval);
+  }, [fetchDinos]);
+
+  // Refresh khi user quay lại tab (focus/visibility)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchDinos(true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchDinos]);
 
   // Filter + sort: featured first
   const filtered = dinos
@@ -99,6 +127,15 @@ export default function HomePage() {
             <a href={serverDiscord} target="_blank" rel="noopener" className="btn btn-outline btn-sm">
               Discord
             </a>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => fetchDinos(false)}
+              disabled={refreshing}
+              title="Cập nhật bảng giá"
+              style={{ minWidth:80 }}
+            >
+              {refreshing ? '⏳ ...' : '🔄 Refresh'}
+            </button>
             <a href="/admin" className="btn btn-ghost btn-sm">⚙ Admin</a>
           </div>
         </div>
