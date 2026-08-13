@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.next/
+out/
+
+# Env files (NEVER commit real passwords!)
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
