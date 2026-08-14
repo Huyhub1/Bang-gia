@@ -145,13 +145,20 @@ export default function HomePage() {
     return acc;
   }, {});
 
+  // View & Filter states
+  const [viewMode, setViewMode]         = useState('grid'); // 'grid' | 'table'
+  const [saleOnly, setSaleOnly]         = useState(false);
+  const [availableOnly, setAvailableOnly] = useState(false);
+
   // Filter + sort: featured first
   const filtered = dinos
     .filter(d => {
       const matchCat = category === 'all' || d.category === category;
       const matchSrch = !search || d.name.toLowerCase().includes(search.toLowerCase()) ||
                         (d.description || '').toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSrch;
+      const matchSale = !saleOnly || (d.originalPrice && Number(d.originalPrice) > Number(d.price));
+      const matchAvail = !availableOnly || d.available;
+      return matchCat && matchSrch && matchSale && matchAvail;
     })
     .sort((a, b) => {
       if (a.featured && !b.featured) return -1;
@@ -273,6 +280,7 @@ export default function HomePage() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
         <div className="cat-filters">
           {CATEGORIES.map(c => (
             <button
@@ -284,35 +292,149 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+
+        {/* Quick Toggles & View Mode Switcher */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginLeft: 'auto' }}>
+          <button
+            className={`cat-btn${saleOnly ? ' active' : ''}`}
+            onClick={() => setSaleOnly(!saleOnly)}
+            style={{ color: saleOnly ? 'var(--red)' : '' }}
+          >
+            🔥 GIẢM GIÁ
+          </button>
+
+          <button
+            className={`cat-btn${availableOnly ? ' active' : ''}`}
+            onClick={() => setAvailableOnly(!availableOnly)}
+          >
+            ✓ CÒN HÀNG
+          </button>
+
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-glass)', padding: 3, borderRadius: 'var(--r-s)', border: '1px solid var(--border-w)' }}>
+            <button
+              className={`view-toggle-btn${viewMode === 'grid' ? ' active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Xem dạng thẻ"
+            >
+              📱 Lưới
+            </button>
+            <button
+              className={`view-toggle-btn${viewMode === 'table' ? ' active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Xem dạng bảng danh sách"
+            >
+              📋 Bảng Gọn
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* ── Dino Grid ── */}
-      <main className="dino-grid">
-        {loading ? (
-          <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0' }}>
-            <div className="spinner" style={{ margin:'0 auto 12px' }} />
-            <p style={{ color:'var(--text-2)' }}>Đang tải...</p>
+      {/* ── Content View ── */}
+      {viewMode === 'grid' ? (
+        <main className="dino-grid">
+          {loading ? (
+            <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0' }}>
+              <div className="spinner" style={{ margin:'0 auto 12px' }} />
+              <p style={{ color:'var(--text-2)' }}>Đang tải...</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state">
+              <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <h3>Không tìm thấy mục nào</h3>
+              <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+            </div>
+          ) : (
+            filtered.map(dino => (
+              <DinoCard
+                key={dino.id}
+                dino={dino}
+                cartQty={cart[dino.id] || 0}
+                onAddToCart={() => addToCart(dino.id)}
+                onUpdateQty={(delta) => updateQuantity(dino.id, delta)}
+              />
+            ))
+          )}
+        </main>
+      ) : (
+        /* Public Table View */
+        <div className="public-table-card">
+          <div className="public-table-wrap">
+            <table className="public-table">
+              <thead>
+                <tr>
+                  <th>Tên Dino / Vật Phẩm</th>
+                  <th>Loại</th>
+                  <th>Lv</th>
+                  <th>Giá Bán</th>
+                  <th>Trạng Thái</th>
+                  <th>Hành Động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(dino => {
+                  const cartQty = cart[dino.id] || 0;
+                  const hasDiscount = dino.originalPrice && Number(dino.originalPrice) > Number(dino.price);
+                  return (
+                    <tr key={dino.id}>
+                      <td>
+                        <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {dino.name}
+                          {dino.featured && <span className="badge" style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--gold)' }}>⭐ HOT</span>}
+                        </div>
+                        {dino.description && <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{dino.description}</div>}
+                      </td>
+                      <td><span className={`badge cat-${dino.category}`}>{CAT_LABELS[dino.category] || dino.category}</span></td>
+                      <td>{dino.level ? `Lv.${dino.level}` : '—'}</td>
+                      <td>
+                        {hasDiscount && (
+                          <div style={{ fontSize: 11, textDecoration: 'line-through', color: 'var(--text-3)' }}>
+                            {Number(dino.originalPrice).toLocaleString('vi-VN')} {dino.currency}
+                          </div>
+                        )}
+                        <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 16 }}>
+                          {Number(dino.price).toLocaleString('vi-VN')}
+                        </span>{' '}
+                        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>{dino.currency}</span>
+                      </td>
+                      <td>
+                        {dino.available ? (
+                          <span className="badge" style={{ background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>✓ Còn hàng</span>
+                        ) : (
+                          <span className="badge" style={{ background:'rgba(239,68,68,0.12)', color:'var(--red)' }}>✗ Hết hàng</span>
+                        )}
+                      </td>
+                      <td>
+                        {dino.available && (
+                          cartQty > 0 ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button className="btn btn-ghost btn-sm" onClick={() => updateQuantity(dino.id, -1)}>-</button>
+                              <span style={{ fontSize: 13, fontWeight: 700, minWidth: 16, textAlign: 'center' }}>{cartQty}</span>
+                              <button className="btn btn-ghost btn-sm" onClick={() => updateQuantity(dino.id, 1)}>+</button>
+                            </div>
+                          ) : (
+                            <button className="btn btn-primary btn-sm" onClick={() => addToCart(dino.id)}>
+                              🛒 Thêm
+                            </button>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+                      Không tìm thấy mục nào phù hợp
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <h3>Không tìm thấy mục nào</h3>
-            <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
-          </div>
-        ) : (
-          filtered.map(dino => (
-            <DinoCard
-              key={dino.id}
-              dino={dino}
-              cartQty={cart[dino.id] || 0}
-              onAddToCart={() => addToCart(dino.id)}
-              onUpdateQty={(delta) => updateQuantity(dino.id, delta)}
-            />
-          ))
-        )}
-      </main>
+        </div>
+      )}
 
       {/* ── Floating Cart Button ── */}
       {totalCartItems > 0 && (
