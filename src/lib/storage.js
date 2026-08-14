@@ -2,121 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const DINOS_KEY = 'ark_dinos';
 
-// ─── Sample seed data ────────────────────────────────────────────────────────
-const SAMPLE_DINOS = [
-  {
-    id: 'sample-1',
-    name: 'T-Rex (Rex)',
-    category: 'carnivore',
-    level: 150,
-    price: 500,
-    currency: 'Cá',
-    imageUrl: 'https://static.wikia.nocookie.net/arksurvivalevolved/images/d/d7/Rex.webp/revision/latest/scale-to-width-down/200',
-    description: 'Vua của các loài khủng long. Sức mạnh hủy diệt không đối thủ trên chiến trường.',
-    available: true,
-    featured: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-2',
-    name: 'Wyvern (Lửa)',
-    category: 'flyer',
-    level: 190,
-    price: 1200,
-    currency: 'Cá',
-    imageUrl: 'https://static.wikia.nocookie.net/arksurvivalevolved/images/c/cb/Fire_Wyvern.webp/revision/latest/scale-to-width-down/200',
-    description: 'Rồng lửa mạnh nhất, phun lửa thiêu đốt kẻ thù trong bán kính rộng.',
-    available: true,
-    featured: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-3',
-    name: 'Giganotosaurus (Giga)',
-    category: 'carnivore',
-    level: 120,
-    price: 800,
-    currency: 'Cá',
-    imageUrl: 'https://static.wikia.nocookie.net/arksurvivalevolved/images/8/84/Giganotosaurus.webp/revision/latest/scale-to-width-down/200',
-    description: 'Quái vật khổng lồ với rage mode cực kỳ nguy hiểm.',
-    available: false,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-4',
-    name: 'Argentavis',
-    category: 'flyer',
-    level: 200,
-    price: 300,
-    currency: 'Cá',
-    imageUrl: 'https://static.wikia.nocookie.net/arksurvivalevolved/images/a/a7/Argentavis.webp/revision/latest/scale-to-width-down/200',
-    description: 'Đại bàng khổng lồ, tốt nhất để vận chuyển và leo núi.',
-    available: true,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-5',
-    name: 'Mosasaurus',
-    category: 'aquatic',
-    level: 135,
-    price: 600,
-    currency: 'Cá',
-    imageUrl: 'https://static.wikia.nocookie.net/arksurvivalevolved/images/b/b3/Mosasaurus.webp/revision/latest/scale-to-width-down/200',
-    description: 'Bá chủ vùng biển sâu, không con nào sánh bằng dưới nước.',
-    available: true,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-6',
-    name: '1k Key',
-    category: 'utility',
-    level: null,
-    price: 50,
-    currency: 'Cá',
-    imageUrl: 'https://cdn.discordapp.com/attachments/1512454215870578851/1537461297413881937/Gemini_Generated_Image_1be8of1be8of1be8.png?ex=6a7f1fe9&is=6a7dce69&hm=e155f3fcf60766ea2a36f2c1ea30c24e43f270922eb54a615b985eb049a3d606',
-    description: 'Gói 1.000 Key hỗ trợ server. Liên hệ Admin để nhận.',
-    available: true,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-7',
-    name: '2k1 Key',
-    category: 'utility',
-    level: null,
-    price: 100,
-    currency: 'Cá',
-    imageUrl: 'https://cdn.discordapp.com/attachments/1512454215870578851/1537461297413881937/Gemini_Generated_Image_1be8of1be8of1be8.png?ex=6a7f1fe9&is=6a7dce69&hm=e155f3fcf60766ea2a36f2c1ea30c24e43f270922eb54a615b985eb049a3d606',
-    description: 'Gói 2.100 Key hỗ trợ server. Liên hệ Admin để nhận.',
-    available: true,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'sample-8',
-    name: '4k5 Key',
-    category: 'utility',
-    level: null,
-    price: 200,
-    currency: 'Cá',
-    imageUrl: 'https://cdn.discordapp.com/attachments/1512454215870578851/1537461297413881937/Gemini_Generated_Image_1be8of1be8of1be8.png?ex=6a7f1fe9&is=6a7dce69&hm=e155f3fcf60766ea2a36f2c1ea30c24e43f270922eb54a615b985eb049a3d606',
-    description: 'Gói 4.500 Key hỗ trợ server. Liên hệ Admin để nhận.',
-    available: true,
-    featured: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+// ─── Không có sample data — bắt đầu với danh sách rỗng ─────────────────────
 
 // ─── In-memory fallback (local dev) ──────────────────────────────────────────
 // NOTE: Vercel serverless resets memory between invocations.
@@ -140,15 +26,16 @@ async function readAll() {
   const redis = await getRedis();
   if (redis) {
     const data = await redis.get(DINOS_KEY);
-    if (!data) {
-      await redis.set(DINOS_KEY, SAMPLE_DINOS);
-      return [...SAMPLE_DINOS];
+    // Nếu chưa có key → khởi tạo mảng rỗng, không seed sample
+    if (data === null || data === undefined) {
+      await redis.set(DINOS_KEY, []);
+      return [];
     }
     return Array.isArray(data) ? data : JSON.parse(data);
   }
-  // Local dev fallback
-  if (!memStore.dinos) {
-    memStore.dinos = [...SAMPLE_DINOS];
+  // Local dev fallback — khởi đầu rỗng, không seed sample
+  if (memStore.dinos === null) {
+    memStore.dinos = [];
   }
   return memStore.dinos;
 }
