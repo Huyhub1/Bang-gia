@@ -400,22 +400,12 @@ export default function HomePage() {
                 </div>
 
                 {/* Buttons */}
-                <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleCopyOrder}>
                     📋 Copy Đơn Hàng
                   </button>
-                  <a
-                    href={serverDiscord}
-                    target="_blank"
-                    rel="noopener"
-                    className="btn btn-outline"
-                    style={{ flex: 1, justifyContent: 'center' }}
-                    onClick={handleCopyOrder}
-                  >
-                    💬 Đặt Hàng Qua Discord
-                  </a>
-                  <button className="btn btn-ghost btn-sm" onClick={clearCart} title="Xóa tất cả">
-                    🗑️ Làm mới
+                  <button className="btn btn-ghost" onClick={clearCart} title="Xóa tất cả đơn hàng">
+                    🗑️ Làm Mới
                   </button>
                 </div>
               </>
