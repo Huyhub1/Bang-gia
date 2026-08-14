@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -47,14 +47,34 @@ export default function HomePage() {
   const [dinos,      setDinos]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(null);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [toast, setToast] = useState(null);
+  const [search,     setSearch]     = useState('');
+  const [category,   setCategory]   = useState('all');
+  const [toast,      setToast]      = useState(null);
+
+  // Cart state: { [dinoId]: quantity }
+  const [cart, setCart]             = useState({});
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [ingameName, setIngameName] = useState('');
+  const [orderNote, setOrderNote]   = useState('');
 
   const showToast = useCallback((msg, type = 'info') => {
     setToast({ msg, type });
   }, []);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ark_shop_cart');
+      if (saved) setCart(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Save cart to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('ark_shop_cart', JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
 
   const fetchDinos = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
@@ -62,7 +82,6 @@ export default function HomePage() {
       const res  = await fetch('/api/dinos?t=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       setDinos(Array.isArray(data) ? data : []);
-      setLastUpdate(new Date());
     } catch {
       if (!silent) showToast('Không thể tải dữ liệu', 'error');
     } finally {
@@ -80,7 +99,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [fetchDinos]);
 
-  // Refresh khi user quay lại tab (focus/visibility)
+  // Refresh khi user quay lại tab
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') fetchDinos(true);
@@ -88,6 +107,43 @@ export default function HomePage() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [fetchDinos]);
+
+  // Cart actions
+  const addToCart = (id) => {
+    setCart(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + 1
+    }));
+  };
+
+  const updateQuantity = (id, delta) => {
+    setCart(prev => {
+      const newQty = (prev[id] || 0) + delta;
+      const copy = { ...prev };
+      if (newQty <= 0) {
+        delete copy[id];
+      } else {
+        copy[id] = newQty;
+      }
+      return copy;
+    });
+  };
+
+  const clearCart = () => {
+    setCart({});
+  };
+
+  // Cart totals calculation
+  const totalCartItems = Object.values(cart).reduce((sum, q) => sum + q, 0);
+
+  const cartTotals = Object.entries(cart).reduce((acc, [id, qty]) => {
+    const dino = dinos.find(d => d.id === id);
+    if (!dino || qty <= 0) return acc;
+    const curr = dino.currency || 'Cá';
+    const itemTotal = (Number(dino.price) || 0) * qty;
+    acc[curr] = (acc[curr] || 0) + itemTotal;
+    return acc;
+  }, {});
 
   // Filter + sort: featured first
   const filtered = dinos
@@ -114,6 +170,32 @@ export default function HomePage() {
   const serverName    = process.env.NEXT_PUBLIC_SERVER_NAME    || 'ARK Mobile Server';
   const serverContact = process.env.NEXT_PUBLIC_SERVER_CONTACT || 'Liên hệ Admin để đặt hàng';
   const serverDiscord = process.env.NEXT_PUBLIC_SERVER_DISCORD || '#';
+
+  // Copy order summary to clipboard
+  const handleCopyOrder = () => {
+    let lines = [`📋 ĐƠN HÀNG ARK — ${serverName}`];
+    if (ingameName.trim()) lines.push(`👤 Ingame / Tribe: ${ingameName.trim()}`);
+    lines.push(`───────────────`);
+    
+    Object.entries(cart).forEach(([id, qty]) => {
+      const dino = dinos.find(d => d.id === id);
+      if (dino && qty > 0) {
+        const itemSubtotal = (Number(dino.price) || 0) * qty;
+        lines.push(`• ${dino.name} (x${qty}): ${itemSubtotal.toLocaleString('vi-VN')} ${dino.currency}`);
+      }
+    });
+
+    lines.push(`───────────────`);
+    lines.push(`💰 TỔNG CỘNG:`);
+    Object.entries(cartTotals).forEach(([curr, total]) => {
+      lines.push(`👉 ${total.toLocaleString('vi-VN')} ${curr}`);
+    });
+    if (orderNote.trim()) lines.push(`📝 Ghi chú: ${orderNote.trim()}`);
+
+    const fullText = lines.join('\n');
+    navigator.clipboard.writeText(fullText);
+    showToast('✅ Đã sao chép đơn hàng! Hãy gửi cho Admin', 'success');
+  };
 
   return (
     <>
@@ -144,11 +226,16 @@ export default function HomePage() {
       {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-tag">🌿 Official Price List</div>
-        <h1>Bảng Giá Dino<br />{serverName}</h1>
+        <h1>Bảng Giá Dino & Vật Phẩm<br />{serverName}</h1>
         <p>{serverContact}</p>
-        <a href={serverDiscord} className="btn btn-primary" style={{ margin:'0 auto' }}>
-          💬 Liên Hệ Đặt Mua
-        </a>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={() => setShowCartModal(true)}>
+            🛒 Xem Đơn Hàng ({totalCartItems})
+          </button>
+          <a href={serverDiscord} target="_blank" rel="noopener" className="btn btn-outline">
+            💬 Discord Server
+          </a>
+        </div>
       </section>
 
       {/* ── Stats ── */}
@@ -156,7 +243,7 @@ export default function HomePage() {
         <div className="stat-chip">
           <div>
             <div className="stat-num">{stats.total}</div>
-            <div className="stat-lbl">Tổng Dino</div>
+            <div className="stat-lbl">Tổng Item/Dino</div>
           </div>
         </div>
         <div className="stat-chip">
@@ -211,15 +298,131 @@ export default function HomePage() {
             <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <h3>Không tìm thấy Dino nào</h3>
+            <h3>Không tìm thấy mục nào</h3>
             <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
           </div>
         ) : (
           filtered.map(dino => (
-            <DinoCard key={dino.id} dino={dino} />
+            <DinoCard
+              key={dino.id}
+              dino={dino}
+              cartQty={cart[dino.id] || 0}
+              onAddToCart={() => addToCart(dino.id)}
+              onUpdateQty={(delta) => updateQuantity(dino.id, delta)}
+            />
           ))
         )}
       </main>
+
+      {/* ── Floating Cart Button ── */}
+      {totalCartItems > 0 && (
+        <button className="floating-cart-btn" onClick={() => setShowCartModal(true)}>
+          🛒 Đơn Hàng Của Bạn
+          <span className="cart-badge">{totalCartItems}</span>
+        </button>
+      )}
+
+      {/* ── Order / Cart Modal ── */}
+      {showCartModal && (
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setShowCartModal(false); }}>
+          <div className="cart-modal">
+            <div className="modal-header">
+              <h3>🛒 Chi Tiết Đơn Hàng</h3>
+              <button className="close-btn" onClick={() => setShowCartModal(false)}>✕</button>
+            </div>
+
+            {totalCartItems === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+                <h4 style={{ color: 'var(--text-2)', marginBottom: 8 }}>Chưa chọn item nào</h4>
+                <p>Nhấn "+ Thêm vào đơn" ở các dino/vật phẩm để tính tổng tiền</p>
+              </div>
+            ) : (
+              <>
+                {/* List of items */}
+                <div className="cart-items-list">
+                  {Object.entries(cart).map(([id, qty]) => {
+                    const dino = dinos.find(d => d.id === id);
+                    if (!dino || qty <= 0) return null;
+                    const subtotal = (Number(dino.price) || 0) * qty;
+                    return (
+                      <div key={id} className="cart-item-card">
+                        <DinoImage src={dino.imageUrl} alt={dino.name} />
+                        <div className="cart-item-info">
+                          <div className="cart-item-name">{dino.name}</div>
+                          <div className="cart-item-price">
+                            {Number(dino.price).toLocaleString('vi-VN')} {dino.currency} × {qty} ={' '}
+                            <strong>{subtotal.toLocaleString('vi-VN')} {dino.currency}</strong>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => updateQuantity(id, -1)}>-</button>
+                          <span style={{ fontSize: 14, fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{qty}</span>
+                          <button className="btn btn-ghost btn-sm" onClick={() => updateQuantity(id, 1)}>+</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => updateQuantity(id, -qty)} title="Xóa">🗑️</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Input fields */}
+                <div className="field">
+                  <label className="label">Tên Ingame / Tribe (Tuỳ chọn)</label>
+                  <input
+                    className="input"
+                    placeholder="VD: Player1 (Tribe Alpha)"
+                    value={ingameName}
+                    onChange={e => setIngameName(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label className="label">Ghi Chú Đơn Hàng (Tuỳ chọn)</label>
+                  <input
+                    className="input"
+                    placeholder="VD: Đặt giao tại Red Obelisk..."
+                    value={orderNote}
+                    onChange={e => setOrderNote(e.target.value)}
+                  />
+                </div>
+
+                {/* Total box */}
+                <div className="cart-totals-box">
+                  <div style={{ fontSize: 13, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 700, marginBottom: 8 }}>
+                    💰 TỔNG CỘNG TẤT CẢ ITEM:
+                  </div>
+                  {Object.entries(cartTotals).map(([curr, total]) => (
+                    <div key={curr} className="cart-total-row">
+                      <span className="cart-total-label">Tổng tiền ({curr}):</span>
+                      <span className="cart-total-val">{total.toLocaleString('vi-VN')} {curr}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Buttons */}
+                <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleCopyOrder}>
+                    📋 Copy Đơn Hàng
+                  </button>
+                  <a
+                    href={serverDiscord}
+                    target="_blank"
+                    rel="noopener"
+                    className="btn btn-outline"
+                    style={{ flex: 1, justifyContent: 'center' }}
+                    onClick={handleCopyOrder}
+                  >
+                    💬 Đặt Hàng Qua Discord
+                  </a>
+                  <button className="btn btn-ghost btn-sm" onClick={clearCart} title="Xóa tất cả">
+                    🗑️ Làm mới
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <footer className="site-footer">
@@ -227,7 +430,7 @@ export default function HomePage() {
           <p>🦖 <strong>{serverName}</strong> · Bảng giá có thể thay đổi mà không cần thông báo trước.</p>
           <p style={{ marginTop:8 }}>
             Liên hệ Admin qua{' '}
-            <a href={serverDiscord}>Discord</a> để đặt hàng và thương lượng giá.
+            <a href={serverDiscord} target="_blank" rel="noopener">Discord</a> để đặt hàng và thương lượng giá.
           </p>
         </div>
       </footer>
@@ -241,7 +444,7 @@ export default function HomePage() {
 }
 
 // ─── Dino Card ────────────────────────────────────────────────────────────────
-function DinoCard({ dino }) {
+function DinoCard({ dino, cartQty, onAddToCart, onUpdateQty }) {
   return (
     <article className="dino-card">
       {dino.featured && <div className="featured-ribbon">HOT</div>}
@@ -284,7 +487,25 @@ function DinoCard({ dino }) {
             </span>
           )}
         </div>
+
+        {/* Action bar / Order controls */}
+        {dino.available && (
+          <div className="card-action-bar">
+            {cartQty > 0 ? (
+              <div className="qty-control">
+                <button className="qty-btn" onClick={() => onUpdateQty(-1)}>-</button>
+                <span className="qty-num">Đã chọn: {cartQty}</span>
+                <button className="qty-btn" onClick={() => onUpdateQty(1)}>+</button>
+              </div>
+            ) : (
+              <button className="btn-add-cart" onClick={onAddToCart}>
+                🛒 Thêm vào đơn
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );
 }
+
