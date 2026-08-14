@@ -12,7 +12,7 @@ const CURRENCIES = ['Cá','Cá Vàng','Cá Rồng','Cá Thần','Cá Đặc Bi�
 
 const EMPTY_FORM = {
   name:'', category:'carnivore', level:'',
-  price:'', currency:'Cá',
+  price:'', originalPrice:'', currency:'Cá',
   imageUrl:'', description:'',
   available:true, featured:false,
 };
@@ -69,13 +69,18 @@ function DinoForm({ initial = EMPTY_FORM, onSubmit, onCancel, submitLabel = 'Th�
           </select>
         </div>
 
-        {/* Price + Level */}
+        {/* Price + Original Price + Level */}
         <div className="field">
-          <label className="label">Giá *</label>
-          <input className="input" type="number" min="0" placeholder="VD: 500" value={form.price}
+          <label className="label">Giá Bán Khuyến Mãi *</label>
+          <input className="input" type="number" min="0" placeholder="VD: 400" value={form.price}
             onChange={e => set('price', e.target.value)} required />
         </div>
         <div className="field">
+          <label className="label">Giá Gốc (Tuỳ chọn - Hiện gạch ngang)</label>
+          <input className="input" type="number" min="0" placeholder="VD: 500" value={form.originalPrice || ''}
+            onChange={e => set('originalPrice', e.target.value)} />
+        </div>
+        <div className="field" style={{ gridColumn:'1/-1' }}>
           <label className="label">Level (tuỳ chọn)</label>
           <input className="input" type="number" min="1" max="999" placeholder="VD: 150" value={form.level}
             onChange={e => set('level', e.target.value)} />
@@ -400,6 +405,11 @@ export default function AdminPage() {
                           <td><span className={`badge cat-${d.category}`}>{CAT_LABELS[d.category]}</span></td>
                           <td>{d.level ? `${d.level}` : '—'}</td>
                           <td>
+                            {d.originalPrice && Number(d.originalPrice) > Number(d.price) && (
+                              <div style={{ textDecoration:'line-through', color:'var(--text-3)', fontSize:12 }}>
+                                {Number(d.originalPrice).toLocaleString()}
+                              </div>
+                            )}
                             <span style={{ color:'var(--gold)', fontWeight:700 }}>
                               {Number(d.price).toLocaleString()}
                             </span>{' '}

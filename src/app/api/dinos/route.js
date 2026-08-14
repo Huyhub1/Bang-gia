@@ -23,15 +23,16 @@ export async function POST(request) {
   }
 
   const newDino = await createDino({
-    name:        body.name        || '',
-    category:    body.category    || 'utility',
-    level:       body.level       ? Number(body.level) : null,
-    price:       Number(body.price),
-    currency:    body.currency    || 'Element',
-    imageUrl:    body.imageUrl    || '',
-    description: body.description || '',
-    available:   body.available   !== false,
-    featured:    body.featured    === true,
+    name:          body.name          || '',
+    category:      body.category      || 'utility',
+    level:         body.level         ? Number(body.level) : null,
+    price:         Number(body.price),
+    originalPrice: body.originalPrice ? Number(body.originalPrice) : null,
+    currency:      body.currency      || 'Element',
+    imageUrl:      body.imageUrl      || '',
+    description:   body.description   || '',
+    available:     body.available     !== false,
+    featured:      body.featured      === true,
   });
 
   return NextResponse.json(newDino, { status: 201 });

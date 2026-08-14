@@ -24,15 +24,16 @@ export async function PUT(request, context) {
   const { id } = await context.params;
   const body = await request.json();
   const updated = await updateDino(id, {
-    name:        body.name,
-    category:    body.category,
-    level:       body.level ? Number(body.level) : null,
-    price:       Number(body.price),
-    currency:    body.currency,
-    imageUrl:    body.imageUrl,
-    description: body.description,
-    available:   body.available,
-    featured:    body.featured,
+    name:          body.name,
+    category:      body.category,
+    level:         body.level ? Number(body.level) : null,
+    price:         Number(body.price),
+    originalPrice: body.originalPrice ? Number(body.originalPrice) : null,
+    currency:      body.currency,
+    imageUrl:      body.imageUrl,
+    description:   body.description,
+    available:     body.available,
+    featured:      body.featured,
   });
 
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });

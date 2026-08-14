@@ -435,9 +435,20 @@ export default function HomePage() {
 
 // ─── Dino Card ────────────────────────────────────────────────────────────────
 function DinoCard({ dino, cartQty, onAddToCart, onUpdateQty }) {
+  const hasDiscount = dino.originalPrice && Number(dino.originalPrice) > Number(dino.price);
+  const discountPercent = hasDiscount
+    ? Math.round(((Number(dino.originalPrice) - Number(dino.price)) / Number(dino.originalPrice)) * 100)
+    : 0;
+
   return (
     <article className="dino-card">
-      {dino.featured && <div className="featured-ribbon">HOT</div>}
+      {dino.featured ? (
+        <div className="featured-ribbon">HOT</div>
+      ) : hasDiscount ? (
+        <div className="featured-ribbon" style={{ background: 'linear-gradient(135deg, #ef4444, #f59e0b)' }}>
+          -{discountPercent}%
+        </div>
+      ) : null}
 
       {/* Image */}
       <div className="card-img-wrap">
@@ -454,19 +465,34 @@ function DinoCard({ dino, cartQty, onAddToCart, onUpdateQty }) {
           {dino.level && <span className="dino-level">Lv.{dino.level}</span>}
         </div>
 
-        <span className={`badge cat-${dino.category}`}>
-          {CAT_LABELS[dino.category] || dino.category}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span className={`badge cat-${dino.category}`}>
+            {CAT_LABELS[dino.category] || dino.category}
+          </span>
+          {hasDiscount && (
+            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--red)' }}>
+              🔥 GIẢM {discountPercent}%
+            </span>
+          )}
+        </div>
 
         {dino.description && (
           <p className="dino-desc">{dino.description}</p>
         )}
 
         <div className="card-footer">
-          <div className="price-block">
-            <span className="price-amount">{Number(dino.price).toLocaleString('vi-VN')}</span>
-            <span className="price-currency">{dino.currency}</span>
+          <div>
+            {hasDiscount && (
+              <div style={{ fontSize: 12, textDecoration: 'line-through', color: 'var(--text-3)', fontWeight: 600 }}>
+                {Number(dino.originalPrice).toLocaleString('vi-VN')} {dino.currency}
+              </div>
+            )}
+            <div className="price-block">
+              <span className="price-amount">{Number(dino.price).toLocaleString('vi-VN')}</span>
+              <span className="price-currency">{dino.currency}</span>
+            </div>
           </div>
+
           {dino.available ? (
             <span className="badge" style={{ background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>
               ✓ Còn Hàng
